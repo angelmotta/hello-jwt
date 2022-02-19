@@ -24,25 +24,31 @@ export const signup = async (req: Request, res: Response) => {
     // Generate Token
     const token: string = jwt.sign({_id: savedUser._id}, process.env.SECRET_TOKEN || 'testsecrettoken');
     // Send Response: Include token in HTTP Header and Json Body
-    res.header('token', token).json(savedUser);
+    res.header('Authorization', token).json(savedUser);
   } catch (err) {
     console.log(`Catched error:`);
     console.log(err);
-    res.send(`signup failed: try with other email`);     
+    if (err instanceof Error) {
+      if (err.name === "MongooseServerSelectionError") {
+        res.send(`Sorry Bro. Service is not available`);
+      } else if (err.message.split(" ")[0] === "E11000") {
+        res.send(`Signup failed. Email already registered`)
+      }
+    }
   }
 }
 
 export const signin = async (req: Request, res: Response) => {
   // Find User in MongoDB
   const userFound = await UserModel.findOne({email: req.body.email});
-  if (!userFound) return res.status(400).json('Sorry bro! Email not found');
+  if (!userFound) return res.status(400).json('Sorry bro! Email not registered');
   // Check credentials
   const isValidPass = userFound.isValidPassword(req.body.password);
   if (!isValidPass) return res.status(400).json('Sorry bro! Invalid password');
   // Generate Token
-  const token: string = jwt.sign({_id: userFound._id}, process.env.SECRET_TOKEN || 'testsecrettoken', { expiresIn: 60 * 10});
+  const token: string = jwt.sign({_id: userFound._id}, process.env.SECRET_TOKEN || 'defaultsecret', { expiresIn: 60 * 10});
   // Send Response: Include token in HTTP Header and Json body
-  res.header('token', token).json(userFound); 
+  res.header('Authorization', token).json(userFound); 
 }
 
 export const profile = async (req: Request, res: Response) => {  
