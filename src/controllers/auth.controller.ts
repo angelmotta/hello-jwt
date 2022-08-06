@@ -40,14 +40,21 @@ export const signup = async (req: Request, res: Response) => {
 
 export const signin = async (req: Request, res: Response) => {
   // Find User in MongoDB
+  console.log("----");
+  console.log(req.body.email);
+  console.log(req.body.password);
+  console.log("----");
   const userFound = await UserModel.findOne({email: req.body.email});
   if (!userFound) return res.status(400).json('Sorry bro! Email not registered');
   // Check credentials
   const isValidPass = userFound.isValidPassword(req.body.password);
   if (!isValidPass) return res.status(400).json('Sorry bro! Invalid password');
-  // Generate Token
+  // Generate Token (10min expiration)
+  console.log(`Login successfull`);
   const token: string = jwt.sign({_id: userFound._id}, process.env.SECRET_TOKEN || 'defaultsecret', { expiresIn: 60 * 10});
   // Send Response: Include token in HTTP Header and Json body
+  console.log("Yes! token generated");
+  //res.header('Authorization', token).json(userFound); 
   res.header('Authorization', token).json(userFound); 
 }
 
@@ -71,4 +78,15 @@ export const profile = async (req: Request, res: Response) => {
     console.log(err);
     return res.status(404).json("Something happened. User not found!");
   });
+}
+
+export const home = (req: Request, res: Response) => {
+  console.log(`--- Call Home Page ---`);
+  // Defensive check
+  if (!req.userId) {  // Request not identified (unkown user)
+    if (res.headersSent) return; // Check if HTTP Response was already sent
+    // Send HTTP Response
+    return res.status(404).json("Sorry bro something wrong happened. I don't know who you are");
+  }
+  // TODO
 }
